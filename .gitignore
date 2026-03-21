@@ -1,0 +1,30 @@
+## Ignora archivos de compilación y binarios
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+
+## Ignora archivos de configuración local
+appsettings.Development.json
+appsettings.Local.json
+*.user
+*.suo
+
+## Ignora archivos de Visual Studio
+.vs/
+*.csproj.user
+
+## IMPORTANTE: Nunca subir API Keys
+**/appsettings.*.json
+!**/appsettings.json
+.env
+*.key
+
+## Ignora carpetas de paquetes NuGet
+packages/
+.nuget/
+
+## Ignora logs
+*.log
+logs/
