@@ -1,41 +1,29 @@
 using Microsoft.Extensions.Options;
 using pruieba.Models;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using Google.GenAI;
+using GeminiTypes = Google.GenAI.Types;
 
 namespace pruieba.Services;
 
 /// <summary>
-/// Servicio que gestiona la comunicación con la API de Google Gemini.
+/// Servicio que gestiona la comunicación con la API de Google Gemini usando el SDK oficial Google.GenAI.
 /// Implementa generación de texto, chat conversacional y análisis de imágenes.
 /// </summary>
 public class GeminiService : IGeminiService
 {
-    private readonly HttpClient _httpClient;
     private readonly GeminiSettings _settings;
     private readonly ILogger<GeminiService> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly Client _client;
 
     public GeminiService(
-        HttpClient httpClient,
         IOptions<GeminiSettings> settings,
         ILogger<GeminiService> logger)
     {
-        _httpClient = httpClient;
         _settings = settings.Value;
         _logger = logger;
 
-        // Configurar opciones de serialización JSON
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        };
-
-        // Configurar HttpClient
-        _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        // Inicializar el cliente de Gemini con la API Key
+        _client = new Client(apiKey: _settings.ApiKey);
     }
 
     /// <summary>
@@ -45,30 +33,27 @@ public class GeminiService : IGeminiService
     {
         try
         {
-            _logger.LogInformation("Generando texto con Gemini para prompt: {Prompt}", prompt.Substring(0, Math.Min(50, prompt.Length)));
+            _logger.LogInformation("Generando texto con Gemini para prompt: {Prompt}", 
+                prompt.Substring(0, Math.Min(50, prompt.Length)));
 
-            var request = new GeminiRequest
+            // Generar contenido usando el SDK oficial
+            var response = await _client.Models.GenerateContentAsync(
+                model: _settings.ModelId,
+                contents: prompt
+            );
+
+            // Extraer texto de la respuesta
+            var text = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
+            if (string.IsNullOrEmpty(text))
             {
-                Contents = new List<Content>
-                {
-                    new Content
-                    {
-                        Role = "user",
-                        Parts = new List<Part>
-                        {
-                            new Part { Text = prompt }
-                        }
-                    }
-                },
-                GenerationConfig = new GenerationConfig
-                {
-                    Temperature = _settings.Temperature,
-                    MaxOutputTokens = _settings.MaxOutputTokens
-                }
-            };
+                _logger.LogWarning("La respuesta de Gemini está vacía");
+                return string.Empty;
+            }
 
-            var response = await SendRequestAsync(request);
-            return ExtractTextFromResponse(response);
+            _logger.LogInformation("Respuesta generada exitosamente");
+
+            return text;
         }
         catch (Exception ex)
         {
@@ -86,35 +71,43 @@ public class GeminiService : IGeminiService
         {
             _logger.LogInformation("Iniciando chat con historial de {Count} mensajes", history.Count);
 
-            var request = new GeminiRequest
-            {
-                Contents = new List<Content>(),
-                GenerationConfig = new GenerationConfig
-                {
-                    Temperature = _settings.Temperature,
-                    MaxOutputTokens = _settings.MaxOutputTokens
-                }
-            };
+            // Construir el contenido con historial
+            var contents = new List<GeminiTypes.Content>();
 
-            // Agregar historial al contexto
+            // Agregar historial previo
             foreach (var msg in history)
             {
-                request.Contents.Add(new Content
+                contents.Add(new GeminiTypes.Content
                 {
                     Role = msg.Role,
-                    Parts = new List<Part> { new Part { Text = msg.Message } }
+                    Parts = new List<GeminiTypes.Part> { new GeminiTypes.Part { Text = msg.Message } }
                 });
             }
 
             // Agregar nuevo mensaje del usuario
-            request.Contents.Add(new Content
+            contents.Add(new GeminiTypes.Content
             {
                 Role = "user",
-                Parts = new List<Part> { new Part { Text = newMessage } }
+                Parts = new List<GeminiTypes.Part> { new GeminiTypes.Part { Text = newMessage } }
             });
 
-            var response = await SendRequestAsync(request);
-            return ExtractTextFromResponse(response);
+            // Generar respuesta
+            var response = await _client.Models.GenerateContentAsync(
+                model: _settings.ModelId,
+                contents: contents
+            );
+
+            var text = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
+            if (string.IsNullOrEmpty(text))
+            {
+                _logger.LogWarning("La respuesta del chat está vacía");
+                return string.Empty;
+            }
+
+            _logger.LogInformation("Chat completado");
+
+            return text;
         }
         catch (Exception ex)
         {
@@ -138,36 +131,45 @@ public class GeminiService : IGeminiService
                 base64Image = base64Image.Split(',')[1];
             }
 
-            var request = new GeminiRequest
+            // Convertir Base64 a bytes
+            var imageBytes = Convert.FromBase64String(base64Image);
+
+            // Crear contenido multimodal (texto + imagen) usando FileData
+            var content = new GeminiTypes.Content
             {
-                Contents = new List<Content>
+                Role = "user",
+                Parts = new List<GeminiTypes.Part>
                 {
-                    new Content
+                    new GeminiTypes.Part { Text = prompt },
+                    new GeminiTypes.Part
                     {
-                        Role = "user",
-                        Parts = new List<Part>
+                        // Usar FileData para imágenes inline
+                        FileData = new GeminiTypes.FileData
                         {
-                            new Part
-                            {
-                                InlineData = new InlineData
-                                {
-                                    MimeType = "image/jpeg",
-                                    Data = base64Image
-                                }
-                            },
-                            new Part { Text = prompt }
+                            MimeType = "image/jpeg",
+                            FileUri = $"data:image/jpeg;base64,{base64Image}"
                         }
                     }
-                },
-                GenerationConfig = new GenerationConfig
-                {
-                    Temperature = _settings.Temperature,
-                    MaxOutputTokens = _settings.MaxOutputTokens
                 }
             };
 
-            var response = await SendRequestAsync(request);
-            return ExtractTextFromResponse(response);
+            // Generar respuesta con análisis de imagen
+            var response = await _client.Models.GenerateContentAsync(
+                model: _settings.ModelId,
+                contents: new List<GeminiTypes.Content> { content }
+            );
+
+            var text = response?.Candidates?[0]?.Content?.Parts?[0]?.Text;
+
+            if (string.IsNullOrEmpty(text))
+            {
+                _logger.LogWarning("La respuesta del análisis de imagen está vacía");
+                return string.Empty;
+            }
+
+            _logger.LogInformation("Imagen analizada exitosamente");
+
+            return text;
         }
         catch (Exception ex)
         {
@@ -213,84 +215,5 @@ public class GeminiService : IGeminiService
             _logger.LogError(ex, "Error al generar reporte tipo: {ReportType}", reportType);
             throw new ApplicationException($"Error al generar reporte de tipo {reportType}", ex);
         }
-    }
-
-    /// <summary>
-    /// Envía la petición HTTP a la API de Gemini
-    /// </summary>
-    private async Task<GeminiResponse> SendRequestAsync(GeminiRequest request)
-    {
-        try
-        {
-            // Construir URL del endpoint
-            var endpoint = $"{_settings.BaseUrl}/{_settings.ModelId}:generateContent?key={_settings.ApiKey}";
-
-            // Serializar el cuerpo de la petición
-            var jsonContent = JsonSerializer.Serialize(request, _jsonOptions);
-            var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            _logger.LogDebug("Enviando petición a Gemini: {Endpoint}", endpoint.Replace(_settings.ApiKey, "***"));
-
-            // Enviar petición POST
-            var httpResponse = await _httpClient.PostAsync(endpoint, httpContent);
-
-            // Leer respuesta
-            var responseContent = await httpResponse.Content.ReadAsStringAsync();
-
-            // Validar código de estado HTTP
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                _logger.LogError("Error HTTP {StatusCode}: {Content}", httpResponse.StatusCode, responseContent);
-                throw new HttpRequestException($"Error de la API de Gemini: {httpResponse.StatusCode} - {responseContent}");
-            }
-
-            // Deserializar respuesta
-            var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseContent, _jsonOptions);
-
-            if (geminiResponse == null)
-            {
-                throw new InvalidOperationException("La respuesta de Gemini no pudo ser deserializada");
-            }
-
-            _logger.LogInformation("Respuesta recibida. Tokens usados: {Tokens}",
-                geminiResponse.UsageMetadata?.TotalTokenCount ?? 0);
-
-            return geminiResponse;
-        }
-        catch (TaskCanceledException ex)
-        {
-            _logger.LogError(ex, "Timeout al conectar con Gemini");
-            throw new TimeoutException("La petición a Gemini excedió el tiempo límite", ex);
-        }
-        catch (HttpRequestException ex)
-        {
-            _logger.LogError(ex, "Error HTTP al comunicarse con Gemini");
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Extrae el texto generado de la respuesta de Gemini
-    /// </summary>
-    private string ExtractTextFromResponse(GeminiResponse response)
-    {
-        if (response.Candidates == null || response.Candidates.Count == 0)
-        {
-            _logger.LogWarning("La respuesta no contiene candidatos");
-            return string.Empty;
-        }
-
-        var firstCandidate = response.Candidates[0];
-        var parts = firstCandidate.Content?.Parts;
-
-        if (parts == null || parts.Count == 0)
-        {
-            _logger.LogWarning("El candidato no contiene partes de texto");
-            return string.Empty;
-        }
-
-        // Concatenar todos los textos de las partes
-        var texts = parts.Where(p => !string.IsNullOrEmpty(p.Text)).Select(p => p.Text);
-        return string.Join(" ", texts);
     }
 }

@@ -14,7 +14,7 @@ public class GeminiSettings
     /// <summary>
     /// Identificador del modelo a utilizar (ej: gemini-2.0-flash)
     /// </summary>
-    public string ModelId { get; set; } = "gemini-2.0-flash";
+    public string ModelId { get; set; } = "gemini-2.5-flash";
 
     /// <summary>
     /// URL base de la API de Google Gemini

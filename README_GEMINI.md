@@ -16,16 +16,8 @@ Sistema de control logístico para **TRANSPORTES PREMIUM S.A.** con inteligencia
 
 ### 1. Configurar API Key
 
-#### Opción A: Variable de Entorno (Recomendado)
-```bash
-# Windows PowerShell
-$env:GEMINI_API_KEY="TU_API_KEY_AQUI"
+La API Key está configurada en `appsettings.json`:
 
-# Linux/Mac
-export GEMINI_API_KEY="TU_API_KEY_AQUI"
-```
-
-#### Opción B: Archivo appsettings.Development.json
 ```json
 {
   "Gemini": {
