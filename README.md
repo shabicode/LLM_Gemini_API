@@ -1,40 +1,30 @@
-# 🚢 LogiFleet API - Google Gemini Integration
+# LogiFleet API - Google Gemini Integration
 
-[![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
-[![Google Gemini](https://img.shields.io/badge/Google-Gemini%202.0-4285F4?logo=google)](https://ai.google.dev/)
-[![License](https://img.shields.io/badge/License-Proprietary-red)](LICENSE)
-
-Sistema de control logístico para **TRANSPORTES PREMIUM S.A.** con inteligencia artificial integrada mediante Google Gemini.
+Sistema de control logístico para TRANSPORTES PREMIUM S.A. con inteligencia artificial integrada mediante Google Gemini.
 
 ---
 
-## 🎯 Descripción del Proyecto
+## Descripción del Proyecto
 
-LogiFleet es una API REST diseñada para optimizar las operaciones del ferry en la ruta **Mazatlán ↔ La Paz**, utilizando IA generativa para:
+LogiFleet es una API REST diseñada para optimizar las operaciones del ferry en la ruta Mazatlán - La Paz, utilizando IA generativa para:
 
--  **Asistente Virtual** para operadores portuarios
--  **Generación de reportes** ejecutivos y operativos
--  **Detección de anomalías** en operaciones
--  **Análisis de imágenes** (OCR de documentos vehiculares)
+- Asistente Virtual para operadores portuarios
+- Generación de reportes ejecutivos y operativos
+- Detección de anomalías en operaciones
+- Análisis de imágenes (OCR de documentos vehiculares)
 
 ---
 
-## ⚡ Inicio Rápido
+## Inicio Rápido
 
 ### Visual Studio (Recomendado)
 
-1. Abre el proyecto en **Visual Studio 2022+**
-2. Presiona **F5** o haz clic en ▶️
+1. Abre el proyecto en Visual Studio 2022+
+2. Presiona F5 o haz clic en el botón de ejecución
 3. El navegador se abrirá automáticamente en Swagger
 
 ### PowerShell/Terminal
-
-```powershell
-# Ejecutar script de inicio
-.\start.ps1
-```
-
-O manualmente:
+ 
 ```powershell
 dotnet run
 ```
@@ -43,7 +33,7 @@ Swagger estará disponible en: **https://localhost:5001/swagger**
 
 ---
 
-## 📋 Endpoints Disponibles
+## Endpoints Disponibles
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
@@ -54,62 +44,79 @@ Swagger estará disponible en: **https://localhost:5001/swagger**
 
 ---
 
-##  Requisitos
+## Requisitos
 
-- **.NET 8 SDK** ([Descargar](https://dotnet.microsoft.com/download/dotnet/8.0))
-- **Visual Studio 2022+** o **VS Code**
-- **API Key de Google AI Studio** ([Obtener aquí](https://makersuite.google.com/app/apikey))
+- .NET 8 SDK ([Descargar](https://dotnet.microsoft.com/download/dotnet/8.0))
+- Visual Studio 2022+ o VS Code
+- API Key de Google AI Studio ([Obtener aquí](https://makersuite.google.com/app/apikey))
 
 ---
 
-##  Configuración
+## Configuración
 
 ### 1. API Key
 
-La API Key ya está configurada en `Properties/launchSettings.json` para desarrollo.
+La API Key está configurada en `appsettings.json`:
 
-**Para producción**, usa variables de entorno:
-```powershell
-$env:GEMINI_API_KEY = "TU_API_KEY"
-```
-
-### 2. Configuración del Modelo
-
-Edita `appsettings.json`:
 ```json
 {
   "Gemini": {
-    "ModelId": "gemini-2.0-flash",
-    "Temperature": 0.7,
+    "ApiKey": "TU_API_KEY_AQUI"
+  }
+}
+```
+
+**IMPORTANTE**: Nunca subas la API Key al repositorio público. Agrega `appsettings.json` a `.gitignore` o usa Azure Key Vault para producción.
+
+### 2. Configuración del Modelo
+
+Edita `appsettings.json` para ajustar parámetros:
+
+```json
+{
+  "Gemini": {
+    "ApiKey": "YOUR_API_KEY",
+    "ModelId": "gemini-2.5-flash",
+    "BaseUrl": "https://generativelanguage.googleapis.com/v1beta/models",
     "MaxOutputTokens": 2048,
+    "Temperature": 0.7,
     "TimeoutSeconds": 30
   }
 }
 ```
 
+**Parámetros disponibles:**
+
+| Parámetro | Descripción | Valores |
+|-----------|-------------|---------|
+| `ModelId` | Modelo de Gemini a utilizar | gemini-2.5-flash, gemini-1.5-pro, etc. |
+| `Temperature` | Creatividad de las respuestas | 0.0 - 2.0 (0.7 recomendado) |
+| `MaxOutputTokens` | Longitud máxima de respuesta | 100 - 8192 |
+| `TimeoutSeconds` | Timeout de peticiones HTTP | 10 - 120 |
+
 ---
 
-##  Documentación
+## Documentación
 
 | Archivo | Descripción |
 |---------|-------------|
-| [INICIO_RAPIDO.md](INICIO_RAPIDO.md) | Guía de inicio rápido paso a paso |
-| [GUIA_SWAGGER.md](GUIA_SWAGGER.md) | Tutorial completo de Swagger UI |
 | [README_GEMINI.md](README_GEMINI.md) | Documentación técnica de la integración |
-| [PRUEBAS_GEMINI.md](PRUEBAS_GEMINI.md) | Scripts PowerShell para testing |
-| [Examples/](Examples/) | 8 ejemplos de código en C# |
+| [GUIA_SWAGGER.md](GUIA_SWAGGER.md) | Tutorial completo de Swagger UI |
+| [VISION_AI_GUIDE.md](VISION_AI_GUIDE.md) | Guía de análisis de imágenes |
+| [Examples/](Examples/) | Ejemplos de código en C# |
 
 ---
 
-##  Testing
+## Testing
 
 ### Swagger UI (Interfaz Gráfica)
+
+Accede a Swagger en:
 ```
 https://localhost:5001/swagger
 ```
 
-### Scripts PowerShell
-Ver [PRUEBAS_GEMINI.md](PRUEBAS_GEMINI.md)
+Desde Swagger puedes probar todos los endpoints de forma interactiva con ejemplos precargados.
 
 ---
 
@@ -121,27 +128,27 @@ pruieba/
 │   ├── GeminiController.cs       # Endpoints REST
 │   └── SwaggerExamples.cs        # Ejemplos para Swagger
 ├── Services/
-│   ├── IGeminiService.cs         # Interfaz
-│   └── GeminiService.cs          # Implementación con HttpClient
+│   ├── IGeminiService.cs         # Interfaz del servicio
+│   └── GeminiService.cs          # Implementación con SDK Google.GenAI
 ├── Models/
 │   ├── GeminiSettings.cs         # Configuración
 │   ├── GeminiRequest.cs          # DTOs de petición
 │   ├── GeminiResponse.cs         # DTOs de respuesta
 │   └── GeminiDtos.cs             # DTOs de endpoints
 ├── Examples/
-│   └── GeminiUsageExamples.cs    # 8 ejemplos de uso
+│   └── GeminiUsageExamples.cs    # Ejemplos de uso
 ├── Properties/
-│   └── launchSettings.json       # Configuración de VS
+│   └── launchSettings.json       # Configuración de Visual Studio
 ├── Program.cs                    # Configuración DI y Swagger
-└── appsettings.json              # Configuración de la app
+└── appsettings.json              # Configuración de la aplicación
 ```
 
 ---
 
-##  Ejemplos de Uso
+## Ejemplos de Uso
 
 ### Chat Conversacional
-```csharp
+```json
 POST /api/gemini/chat
 {
   "message": "¿Cómo registro un camión de 12 metros?",
@@ -150,7 +157,7 @@ POST /api/gemini/chat
 ```
 
 ### Análisis de Imagen
-```csharp
+```json
 POST /api/gemini/analyze
 {
   "imageBase64": "iVBORw0KGgo...",
@@ -159,7 +166,7 @@ POST /api/gemini/analyze
 ```
 
 ### Reporte de Operaciones
-```csharp
+```json
 POST /api/gemini/report
 {
   "fecha": "2024-01-15",
@@ -169,30 +176,38 @@ POST /api/gemini/report
 }
 ```
 
+Ver [GUIA_SWAGGER.md](GUIA_SWAGGER.md) para ejemplos completos.
+
 ---
 
-##  Scripts Útiles
+## Scripts Útiles
 
 | Script | Descripción |
 |--------|-------------|
-| `.\start.ps1` | Inicia la aplicación con configuración automática |
+| `.\start.ps1` | Inicia la aplicación |
 | `.\rebuild.ps1` | Limpia y recompila el proyecto |
 
 ---
 
-##  Seguridad
+## Seguridad
 
- **Implementado:**
-- API Key protegida (no hardcodeada)
-- Variables de entorno para producción
-- `.gitignore` configurado
+**Implementado:**
+- API Key desde archivo de configuración (no hardcodeada)
 - Validación de entrada en endpoints
 - Manejo de excepciones completo
-- Timeout configurado (30s)
+- Timeout configurado (30s por defecto)
+- Logging de operaciones
+- CORS configurado
+
+**Recomendaciones para producción:**
+- Usar Azure Key Vault o variables de entorno para la API Key
+- Implementar rate limiting
+- Agregar autenticación/autorización
+- Configurar HTTPS obligatorio
 
 ---
 
-##  Solución de Problemas
+## Solución de Problemas
 
 ### Error: "Proceso bloqueado"
 ```powershell
@@ -200,34 +215,38 @@ POST /api/gemini/report
 ```
 
 ### Error: "API Key inválida"
-Verifica que la key esté configurada en `launchSettings.json` o como variable de entorno.
+Verifica que la API Key esté configurada correctamente en `appsettings.json` y sea válida.
 
-### Más ayuda
-Ver [INICIO_RAPIDO.md](INICIO_RAPIDO.md) sección "Solución de Problemas"
+### Error: Timeout
+Aumenta el valor de `TimeoutSeconds` en `appsettings.json`.
 
----
-
-##  Características
-
-✅ Integración nativa con Google Gemini 2.0  
-✅ Swagger UI interactivo  
-✅ Chat conversacional con historial  
-✅ Visión artificial (análisis de imágenes)  
-✅ Generación de reportes en lenguaje natural  
-✅ Detección de anomalías operativas  
-✅ Documentación completa  
-✅ Ejemplos de código listos para usar  
-✅ Scripts de testing automático  
-✅ Panel HTML de pruebas  
+### Error: "Model not found"
+Verifica que el `ModelId` en `appsettings.json` sea un modelo válido de Gemini (actualmente: gemini-2.5-flash).
 
 ---
 
-##  Stack Tecnológico
+## Características
+
+- Integración con Google Gemini 2.5 Flash
+- Swagger UI interactivo con ejemplos
+- Chat conversacional con historial de contexto
+- Análisis de imágenes (visión artificial multimodal)
+- Generación de reportes en lenguaje natural
+- Detección de anomalías operativas
+- Arquitectura de servicios con inyección de dependencias
+- Documentación completa
+- Scripts de automatización
+
+---
+
+## Stack Tecnológico
 
 - **Backend:** .NET 8 (C#)
-- **LLM:** Google Gemini 2.0 Flash
-- **SDK:** Google.GenAI v1.3.0 (oficial)
-- **Documentación:** Swagger/OpenAPI
+- **LLM:** Google Gemini 2.5 Flash
+- **SDK:** Google.GenAI v1.4.0 (oficial)
+- **Documentación:** Swagger/OpenAPI (Swashbuckle v6.5.0)
 - **Testing:** Swagger UI + Scripts PowerShell
+- **Patrones:** Dependency Injection, Options Pattern, Service Layer
 
 ---
+ 
